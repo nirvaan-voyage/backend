@@ -166,15 +166,23 @@ func (s Service) Login(ctx context.Context, req models.LoginRequest) (models.Aut
 
 // ── Password Reset ─────────────────────────────────────────────────────────
 
-func (s Service) ResetPassword(ctx context.Context, email, newPassword string) error {
+func (s Service) ResetPassword(ctx context.Context, identifier, newPassword string) error {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
 
-	_, err = s.db.Exec(ctx,
-		"UPDATE users SET password_hash = $1, updated_at = NOW() WHERE email = $2",
-		string(passwordHash), strings.ToLower(strings.TrimSpace(email)),
+	identifier = strings.TrimSpace(identifier)
+
+	_, err = s.db.Exec(
+		ctx,
+		`UPDATE users
+		 SET password_hash = $1,
+		     updated_at = NOW()
+		 WHERE LOWER(email) = LOWER($2)
+		    OR phone = $2`,
+		string(passwordHash),
+		identifier,
 	)
 	if err != nil {
 		return fmt.Errorf("update password: %w", err)
