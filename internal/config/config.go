@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -29,6 +30,24 @@ func Load() Config {
 		JWTSecret:     required("JWT_SECRET"),
 		JWTExpiration: time.Duration(expiresInHours) * time.Hour,
 	}
+}
+
+func loadDotEnv() error {
+	candidates := []string{".env"}
+
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(cwd, ".env"))
+	}
+
+	candidates = append(candidates, `C:\Users\dhaka\OneDrive\Desktop\backend\.env`)
+
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			return godotenv.Load(path)
+		}
+	}
+
+	return godotenv.Load(candidates...)
 }
 
 func required(key string) string {
