@@ -38,3 +38,15 @@ func RegisterAuthRoutes(router *gin.Engine, authHandler interface {
 		auth.POST("/reset-password", otpHandler.ResetPassword)
 	}
 }
+
+// RegisterFlightRoutes mounts all external API endpoints for travel data.
+func RegisterFlightRoutes(router *gin.Engine, flightHandler interface {
+	SearchLiveFlights(*gin.Context) // Updated to match our new handler method!
+}) {
+	api := router.Group("/api")
+	{
+		// Attached directly to the 'api' group instance.
+		// This automatically resolves the full URL path to: /api/flights/search
+		api.GET("/flights/search", flightHandler.SearchLiveFlights)
+	}
+}

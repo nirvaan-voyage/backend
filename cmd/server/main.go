@@ -29,12 +29,12 @@ func main() {
 	}
 	defer db.Close()
 
-	// ── Meghna's auth layer (register + login + JWT) ──────────────────────
+	// ── Auth Layer (Register + Login + JWT) ──────────────────────────────────
 	jwtService := auth.NewJWTService(cfg.JWTSecret, cfg.JWTExpiration)
 	authService := auth.NewService(db, jwtService)
 	authHandler := auth.NewHandler(authService)
 
-	// ── Tanya's OTP layer (generate-otp + verify-otp) ────────────────────
+	// ── OTP Layer (Generate-OTP + Verify-OTP) ──────────────────────────────
 	otpRepo := repositories.NewOTPRepository(db)
 	otpService := services.NewOTPService(
 		otpRepo,
@@ -42,9 +42,11 @@ func main() {
 	)
 	otpHandler := handlers.NewOTPHandler(otpService, authService)
 
+	// ── Core Engine Initialization ──────────────────────────────────────────
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 
+	// Health Checks
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -53,7 +55,13 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "Nirvaan Backend Running 🚀"})
 	})
 
+	// ── Mounting the Route Groups ───────────────────────────────────────────
 	routes.RegisterAuthRoutes(router, authHandler, otpHandler)
+
+	// Initializes your updated flight handler
+	flightController := handlers.NewFlightHandler()
+	// Mounts the new dynamic /api/flights/search endpoint seamlessly
+	routes.RegisterFlightRoutes(router, flightController)
 
 	log.Printf("Nirvaan backend listening on :%s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
