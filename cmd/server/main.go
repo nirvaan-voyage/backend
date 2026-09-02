@@ -20,7 +20,7 @@ import (
 func main() {
 	cfg := config.Load()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
 	db, err := database.Connect(ctx, cfg.DatabaseURL)
@@ -58,10 +58,18 @@ func main() {
 	// ── Mounting the Route Groups ───────────────────────────────────────────
 	routes.RegisterAuthRoutes(router, authHandler, otpHandler)
 
+	travelService := services.NewTravelAPIService()
+	travelHandler := handlers.NewTravelHandler(travelService)
+	routes.RegisterTravelRoutes(router, travelHandler)
+
 	// Initializes your updated flight handler
-	flightController := handlers.NewFlightHandler()
+	flightController := handlers.NewFlightHandler(travelService)
 	// Mounts the new dynamic /api/flights/search endpoint seamlessly
 	routes.RegisterFlightRoutes(router, flightController)
+
+	itineraryService := services.NewItineraryService()
+	itineraryHandler := handlers.NewItineraryHandler(itineraryService)
+	routes.RegisterItineraryRoutes(router, itineraryHandler)
 
 	log.Printf("Nirvaan backend listening on :%s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {

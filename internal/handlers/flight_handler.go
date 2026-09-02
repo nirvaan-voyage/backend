@@ -2,17 +2,21 @@ package handlers
 
 import (
 	"net/http"
-	"nirvaan-backend/internal/services" // Make sure this matches your module name!
+
+	"nirvaan-backend/internal/models"
+	"nirvaan-backend/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 // FlightHandler is the controller struct for flight routes
-type FlightHandler struct{}
+type FlightHandler struct {
+	travelService *services.TravelAPIService
+}
 
 // NewFlightHandler acts as a constructor to initialize the controller in main.go
-func NewFlightHandler() *FlightHandler {
-	return &FlightHandler{}
+func NewFlightHandler(travelService *services.TravelAPIService) *FlightHandler {
+	return &FlightHandler{travelService: travelService}
 }
 
 // SearchLiveFlights is now properly attached to the FlightHandler using (h *FlightHandler)
@@ -22,15 +26,25 @@ func (h *FlightHandler) SearchLiveFlights(c *gin.Context) {
 	destination := c.DefaultQuery("to", "BOM")   // Defaults to Mumbai
 	date := c.DefaultQuery("date", "2026-12-15") // Defaults to a future date
 
-	// Pass the dynamic queries into our Duffel service
-	flights, err := services.SearchDuffelFlights(origin, destination, date)
-
+	response, err := h.travelService.Search(c.Request.Context(), "flights", origin, destination, date, "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   err.Error(),
 		})
 		return
+	}
+
+	flights := make([]models.BookableFlight, 0, len(response.Data))
+	for _, item := range response.Data {
+		flights = append(flights, models.BookableFlight{
+			ID:        item.ID,
+			Airline:   item.Title,
+			Departure: item.Origin,
+			Arrival:   item.Destination,
+			Price:     item.Price,
+			Currency:  item.Currency,
+		})
 	}
 
 	// Return the clean JSON to the frontend

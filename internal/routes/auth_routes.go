@@ -50,3 +50,22 @@ func RegisterFlightRoutes(router *gin.Engine, flightHandler interface {
 		api.GET("/flights/search", flightHandler.SearchLiveFlights)
 	}
 }
+
+func RegisterTravelRoutes(router *gin.Engine, travelHandler interface {
+	Search(*gin.Context)
+}) {
+	api := router.Group("/api")
+	{
+		api.GET("/travel/:category", travelHandler.Search)
+	}
+}
+
+// RegisterItineraryRoutes mounts itinerary generation endpoints.
+func RegisterItineraryRoutes(router *gin.Engine, itineraryHandler interface {
+	Generate(*gin.Context)
+}) {
+	api := router.Group("/api")
+	{
+		api.POST("/itinerary/generate", itineraryHandler.Generate)
+	}
+}
