@@ -54,8 +54,12 @@ func (s *TravelAPIService) Search(ctx context.Context, category, from, to, date,
 	}
 
 	if err != nil || len(items) == 0 {
+		fallbackReason := "provider returned no India results"
+		if err != nil {
+			fallbackReason = err.Error()
+		}
 		items = fallbackTravelItems(category, from, to, date, city)
-		source = source + "-fallback"
+		source = source + "-fallback: " + fallbackReason
 	}
 
 	return models.TravelSearchResponse{
@@ -126,7 +130,9 @@ func (s *TravelAPIService) searchHotels(ctx context.Context, city string) ([]mod
 	city = defaultString(city, "Delhi")
 	params := url.Values{}
 	params.Set("city", city)
+	params.Set("country", "India")
 	params.Set("country_code", "IN")
+	params.Set("rating", "3")
 	params.Set("limit", "10")
 
 	var raw struct {
@@ -429,39 +435,60 @@ func fallbackTravelItems(category, from, to, date, city string) []models.TravelS
 }
 
 func sampleFlights(from, to, date string) []models.TravelSearchItem {
+	origin := strings.ToUpper(defaultString(from, "DEL"))
+	destination := strings.ToUpper(defaultString(to, "BOM"))
 	return []models.TravelSearchItem{
-		{ID: "flight-1", Type: "flight", Title: "IndiGo 6E 204", Subtitle: "Non-stop domestic flight", Provider: "India test data", Origin: defaultString(from, "DEL"), Destination: defaultString(to, "BOM"), Date: date, Price: "4599", Currency: "INR"},
-		{ID: "flight-2", Type: "flight", Title: "Air India AI 865", Subtitle: "Morning domestic flight", Provider: "India test data", Origin: defaultString(from, "DEL"), Destination: defaultString(to, "BOM"), Date: date, Price: "5299", Currency: "INR"},
+		{ID: "flight-1", Type: "flight", Title: "IndiGo 6E 204", Subtitle: "Non-stop - morning departure - cabin baggage included", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "4599", Currency: "INR"},
+		{ID: "flight-2", Type: "flight", Title: "Air India AI 865", Subtitle: "Non-stop - full service - meal included", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "5299", Currency: "INR"},
+		{ID: "flight-3", Type: "flight", Title: "Akasa Air QP 1127", Subtitle: "Direct flight - evening departure", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "4875", Currency: "INR"},
+		{ID: "flight-4", Type: "flight", Title: "Vistara UK 981", Subtitle: "Premium economy available - flexible fare", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "6420", Currency: "INR"},
+		{ID: "flight-5", Type: "flight", Title: "SpiceJet SG 8193", Subtitle: "Budget fare - afternoon departure", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "3999", Currency: "INR"},
 	}
 }
 
 func sampleHotels(city string) []models.TravelSearchItem {
 	city = defaultString(city, "Delhi")
 	return []models.TravelSearchItem{
-		{ID: "hotel-1", Type: "hotel", Title: "Nirvaan Stay " + city, Subtitle: "Central location with breakfast", Provider: "India test data", Destination: city, Price: "3200", Currency: "INR"},
-		{ID: "hotel-2", Type: "hotel", Title: "Heritage Comfort " + city, Subtitle: "Family friendly hotel", Provider: "India test data", Destination: city, Price: "4100", Currency: "INR"},
+		{ID: "hotel-1", Type: "hotel", Title: "Nirvaan Stay " + city, Subtitle: "Central location - breakfast included - 4.4 rating", Provider: "India test data", Destination: city, Price: "3200", Currency: "INR"},
+		{ID: "hotel-2", Type: "hotel", Title: "Heritage Comfort " + city, Subtitle: "Family friendly - near market - 4.2 rating", Provider: "India test data", Destination: city, Price: "4100", Currency: "INR"},
+		{ID: "hotel-3", Type: "hotel", Title: "Backpacker Nest " + city, Subtitle: "Budget hostel - female dorms - 4.1 rating", Provider: "India test data", Destination: city, Price: "899", Currency: "INR"},
+		{ID: "hotel-4", Type: "hotel", Title: "The City Courtyard " + city, Subtitle: "Boutique hotel - cafe - 4.6 rating", Provider: "India test data", Destination: city, Price: "5600", Currency: "INR"},
+		{ID: "hotel-5", Type: "hotel", Title: "Lakeview Retreat " + city, Subtitle: "Quiet stay - airport pickup - 4.5 rating", Provider: "India test data", Destination: city, Price: "6800", Currency: "INR"},
 	}
 }
 
 func sampleShows(city string) []models.TravelSearchItem {
 	city = defaultString(city, "Mumbai")
 	return []models.TravelSearchItem{
-		{ID: "show-1", Type: "show", Title: "Stand-up Night", Subtitle: city + " comedy show", Provider: "India test data", Destination: city, Price: "799", Currency: "INR"},
-		{ID: "show-2", Type: "show", Title: "Weekend Movie Premiere", Subtitle: city + " theatre listing", Provider: "India test data", Destination: city, Price: "350", Currency: "INR"},
+		{ID: "show-1", Type: "show", Title: "Stand-up Night", Subtitle: city + " comedy club - 8:00 PM", Provider: "India test data", Destination: city, Price: "799", Currency: "INR"},
+		{ID: "show-2", Type: "show", Title: "Weekend Movie Premiere", Subtitle: city + " theatre listing - recliner seats", Provider: "India test data", Destination: city, Price: "350", Currency: "INR"},
+		{ID: "show-3", Type: "show", Title: "Indie Music Evening", Subtitle: city + " live venue - local artists", Provider: "India test data", Destination: city, Price: "999", Currency: "INR"},
+		{ID: "show-4", Type: "show", Title: "Classical Dance Showcase", Subtitle: city + " cultural centre - family friendly", Provider: "India test data", Destination: city, Price: "650", Currency: "INR"},
+		{ID: "show-5", Type: "show", Title: "Food Festival Entry", Subtitle: city + " weekend event - tasting counters", Provider: "India test data", Destination: city, Price: "499", Currency: "INR"},
 	}
 }
 
 func sampleTrains(from, to, date string) []models.TravelSearchItem {
+	origin := strings.ToUpper(defaultString(from, "NDLS"))
+	destination := strings.ToUpper(defaultString(to, "BCT"))
 	return []models.TravelSearchItem{
-		{ID: "train-1", Type: "train", Title: "Rajdhani Express", Subtitle: "India rail test listing", Provider: "India test data", Origin: defaultString(from, "DEL"), Destination: defaultString(to, "BOM"), Date: date, Price: "1850", Currency: "INR"},
-		{ID: "train-2", Type: "train", Title: "Shatabdi Express", Subtitle: "India rail test listing", Provider: "India test data", Origin: defaultString(from, "DEL"), Destination: defaultString(to, "BOM"), Date: date, Price: "1450", Currency: "INR"},
+		{ID: "train-1", Type: "train", Title: "12952 Mumbai Rajdhani", Subtitle: "Fast premium train - pantry available", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "1850", Currency: "INR"},
+		{ID: "train-2", Type: "train", Title: "12002 Shatabdi Express", Subtitle: "Chair car - daytime journey", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "1450", Currency: "INR"},
+		{ID: "train-3", Type: "train", Title: "12216 Garib Rath Express", Subtitle: "AC economy - overnight option", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "990", Currency: "INR"},
+		{ID: "train-4", Type: "train", Title: "12904 Golden Temple Mail", Subtitle: "Sleeper and AC coaches - scenic route", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "760", Currency: "INR"},
+		{ID: "train-5", Type: "train", Title: "12432 Intercity Express", Subtitle: "Short route - reserved seating", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "420", Currency: "INR"},
 	}
 }
 
 func sampleBuses(from, to, date string) []models.TravelSearchItem {
+	origin := defaultString(from, "Delhi")
+	destination := defaultString(to, "Jaipur")
 	return []models.TravelSearchItem{
-		{ID: "bus-1", Type: "bus", Title: "Volvo AC Sleeper", Subtitle: "Intercity bus test listing", Provider: "India test data", Origin: defaultString(from, "Delhi"), Destination: defaultString(to, "Jaipur"), Date: date, Price: "899", Currency: "INR"},
-		{ID: "bus-2", Type: "bus", Title: "Bharat Benz Seater", Subtitle: "Intercity bus test listing", Provider: "India test data", Origin: defaultString(from, "Delhi"), Destination: defaultString(to, "Jaipur"), Date: date, Price: "649", Currency: "INR"},
+		{ID: "bus-1", Type: "bus", Title: "Volvo AC Sleeper", Subtitle: "Overnight - charging point - blanket", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "899", Currency: "INR"},
+		{ID: "bus-2", Type: "bus", Title: "Bharat Benz Seater", Subtitle: "Evening departure - semi sleeper", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "649", Currency: "INR"},
+		{ID: "bus-3", Type: "bus", Title: "IntrCity SmartBus", Subtitle: "Live tracking - lounge access", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "1049", Currency: "INR"},
+		{ID: "bus-4", Type: "bus", Title: "Zingbus Premium", Subtitle: "AC sleeper - hygienic rest stop", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "1199", Currency: "INR"},
+		{ID: "bus-5", Type: "bus", Title: "RSRTC Express", Subtitle: "Budget government bus - frequent service", Provider: "India test data", Origin: origin, Destination: destination, Date: date, Price: "380", Currency: "INR"},
 	}
 }
 
