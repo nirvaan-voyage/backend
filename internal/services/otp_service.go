@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/smtp"
+	"os"
 	"time"
 
+	"nirvaan-backend/internal/auth"
 	"nirvaan-backend/internal/models"
 	"nirvaan-backend/internal/repositories"
-	"nirvaan-backend/internal/auth"
 )
 
 type OTPService struct {
@@ -28,10 +30,7 @@ func NewOTPService(
 }
 
 // GenerateOTP deletes any old OTP for this email+purpose, creates a new
-// 6-digit code valid for 10 minutes, persists it, and returns the code.
-//
-// In development the code is returned directly in the API response.
-// Before production: replace the return value with an email/SMS send,
+// 6-digit code valid for 10 minutes, persists it, and sends the email.
 func (s OTPService) GenerateOTP(ctx context.Context, email, purpose string) (string, error) {
 
 	if err := validatePurpose(purpose); err != nil {
@@ -42,6 +41,7 @@ func (s OTPService) GenerateOTP(ctx context.Context, email, purpose string) (str
 		return "", fmt.Errorf("clear old otps: %w", err)
 	}
 
+	// Generate true 6-digit random code (000000 to 999999)
 	code := fmt.Sprintf("%06d", rand.Intn(1000000))
 
 	otp := &models.OTPCode{
@@ -52,9 +52,13 @@ func (s OTPService) GenerateOTP(ctx context.Context, email, purpose string) (str
 		Used:      false,
 	}
 
-	// ⭐ THIS IS THE IMPORTANT PART
 	if err := s.repo.Save(ctx, otp); err != nil {
 		return "", fmt.Errorf("save otp: %w", err)
+	}
+
+	// Send the real email to the user
+	if err := sendOTPEmail(email, code); err != nil {
+		return "", fmt.Errorf("failed to send OTP email: %w", err)
 	}
 
 	verificationToken, err := s.jwt.GenerateVerificationToken(email)
@@ -97,11 +101,11 @@ func (s OTPService) VerifyOTP(
 	}
 
 	verificationToken, err := s.jwt.GenerateVerificationToken(email)
-if err != nil {
-    return "", err
-}
+	if err != nil {
+		return "", err
+	}
 
-return verificationToken, nil
+	return verificationToken, nil
 }
 
 func validatePurpose(purpose string) error {
@@ -111,4 +115,40 @@ func validatePurpose(purpose string) error {
 	default:
 		return fmt.Errorf("invalid purpose: must be 'signup' or 'forgot_password'")
 	}
+}
+
+// sendOTPEmail grabs credentials from .env and dispatches an HTML email
+func sendOTPEmail(to string, code string) error {
+	from := os.Getenv("SMTP_EMAIL")
+	password := os.Getenv("SMTP_PASSWORD")
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+
+	if from == "" || password == "" {
+		return fmt.Errorf("SMTP credentials are not set in .env")
+	}
+
+	address := host + ":" + port
+
+	// Define email headers and HTML body
+	subject := "Subject: Your Nirvaan Verification Code\n"
+	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	body := fmt.Sprintf(`
+		<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+			<h2 style="color: #3D6B9E; text-align: center;">Nirvaan Verification</h2>
+			<p style="color: #333; font-size: 16px;">Hello,</p>
+			<p style="color: #333; font-size: 16px;">Here is your one-time password (OTP) to continue:</p>
+			<div style="background-color: #f4f7fb; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+				<span style="font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1a3a5c;">%s</span>
+			</div>
+			<p style="color: #7A8DAA; font-size: 14px;">This code will expire in 10 minutes.</p>
+			<p style="color: #7A8DAA; font-size: 12px; margin-top: 30px;">If you didn't request this code, you can safely ignore this email.</p>
+		</div>
+	`, code)
+
+	message := []byte(subject + mime + body)
+
+	// Authenticate and send
+	auth := smtp.PlainAuth("", from, password, host)
+	return smtp.SendMail(address, auth, from, []string{to}, message)
 }

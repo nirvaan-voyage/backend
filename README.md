@@ -37,9 +37,19 @@ DATABASE_URL=postgres://USER:PASSWORD@HOST/neondb?sslmode=require
 JWT_SECRET=replace-with-a-long-random-secret
 JWT_EXPIRES_IN_HOURS=168
 GIN_MODE=debug
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5-mini
+AMADEUS_CLIENT_ID=
+AMADEUS_CLIENT_SECRET=
+HOTELS_API_KEY=
+RAPIDAPI_KEY=
+IRCTC_RAPIDAPI_HOST=irctc1.p.rapidapi.com
+AOPAY_API_KEY=
+TICKETMASTER_API_KEY=
 ```
 
 Use the Neon connection string for `DATABASE_URL`. Keep `sslmode=require` for Neon.
+`OPENAI_API_KEY` is optional while testing; without it, the itinerary endpoint returns a local fallback itinerary and still matches guides.
 
 ## Database
 
@@ -136,3 +146,54 @@ flutter run --dart-define=NIRVAAN_API_URL=http://10.0.2.2:8080
 ```
 
 Use `http://localhost:8080` for desktop builds and `http://10.0.2.2:8080` for Android emulator.
+
+## Itinerary AI Endpoint
+
+`POST /api/itinerary/generate`
+
+The Flutter questionnaire sends destination and answers to the backend. The backend fills Nirvaan's fixed itinerary prompt, calls AI when `OPENAI_API_KEY` is configured, and matches suitable test guides.
+
+```bash
+curl -X POST http://localhost:8080/api/itinerary/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destination": "Jaipur",
+    "answers": {
+      "trip_type": "Cultural",
+      "food": "Local Cuisine",
+      "pace": "Balanced",
+      "hidden_gems": "Yes",
+      "guide": "Yes",
+      "attractions": ["Historical", "Shopping"],
+      "activities": ["Photography"]
+    }
+  }'
+```
+
+
+## India Travel Search APIs
+
+`GET /api/travel/:category` supports `flights`, `hotels`, `trains`, `buses`, and `shows`.
+
+Provider keys:
+
+```bash
+AMADEUS_CLIENT_ID=          # flights, Amadeus test API
+AMADEUS_CLIENT_SECRET=      # flights, Amadeus test API
+HOTELS_API_KEY=             # hotels-api.com, hotels in India
+RAPIDAPI_KEY=               # RapidAPI IRCTC train search
+IRCTC_RAPIDAPI_HOST=irctc1.p.rapidapi.com
+AOPAY_API_KEY=              # India bus search provider
+TICKETMASTER_API_KEY=       # shows/events, countryCode=IN
+```
+
+Example:
+
+```bash
+curl "http://localhost:8080/api/travel/hotels?city=Delhi"
+curl "http://localhost:8080/api/travel/trains?from=NDLS&to=BCT&date=2026-09-15"
+curl "http://localhost:8080/api/travel/buses?from=Delhi&to=Jaipur&date=2026-09-15"
+curl "http://localhost:8080/api/travel/shows?city=Mumbai"
+```
+
+If a provider key is missing or rate-limited, the endpoint returns India-specific fallback data so the Flutter screen still works during development.

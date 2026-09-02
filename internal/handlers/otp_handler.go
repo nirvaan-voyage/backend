@@ -101,18 +101,21 @@ func (h OTPHandler) ResetPassword(c *gin.Context) {
 		"forgot_password",
 		req.Code,
 	); err != nil {
-
-		// 2. Update password
-		if err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.Password); err != nil {
-			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-				Message: "Could not reset password: " + err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Password reset successfully",
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Message: err.Error(),
 		})
-
+		return
 	}
+
+	// 2. Update password
+	if err := h.authService.ResetPassword(c.Request.Context(), req.Email, req.Password); err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not reset password: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password reset successfully",
+	})
 }

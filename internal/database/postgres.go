@@ -84,7 +84,10 @@ func migrate(ctx context.Context, pool *pgxpool.Pool) error {
 
 	for i, stmt := range statements {
 		fmt.Printf("  Migration %d: %s\n", i+1, preview(stmt))
-		if _, err := pool.Exec(ctx, stmt); err != nil {
+		stmtCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		_, err := pool.Exec(stmtCtx, stmt)
+		cancel()
+		if err != nil {
 			return fmt.Errorf("exec migration %q: %w", preview(stmt), err)
 		}
 	}

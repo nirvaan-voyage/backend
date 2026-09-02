@@ -15,6 +15,8 @@ type Config struct {
 	DatabaseURL   string
 	JWTSecret     string
 	JWTExpiration time.Duration
+	OpenAIAPIKey  string
+	OpenAIModel   string
 }
 
 func Load() Config {
@@ -29,6 +31,8 @@ func Load() Config {
 		DatabaseURL:   required("DATABASE_URL"),
 		JWTSecret:     required("JWT_SECRET"),
 		JWTExpiration: time.Duration(expiresInHours) * time.Hour,
+		OpenAIAPIKey:  getString("OPENAI_API_KEY", ""),
+		OpenAIModel:   getString("OPENAI_MODEL", "gpt-5-mini"),
 	}
 }
 
